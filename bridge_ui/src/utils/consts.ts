@@ -814,3 +814,5 @@ export const logoOverrides = new Map<string, string>([
     "https://orion.money/assets/ORION-LOGO-2.1-GREEN@256x256.png",
   ],
 ]);
+
+export const MAX_VAA_UPLOAD_RETRIES_SOLANA = 5;
