@@ -15,6 +15,8 @@ pub trait ByteUtils {
     fn get_u256(&self, index: usize) -> (u128, u128);
     fn get_address(&self, index: usize) -> CanonicalAddr;
     fn get_bytes32(&self, index: usize) -> &[u8];
+    fn get_bytes(&self, index: usize, bytes: usize) -> &[u8];
+    fn get_const_bytes<const N: usize>(&self, index: usize) -> [u8; N];
 }
 
 impl ByteUtils for &[u8] {
@@ -51,6 +53,16 @@ impl ByteUtils for &[u8] {
     fn get_bytes32(&self, index: usize) -> &[u8] {
         &self[index..index + 32]
     }
+
+    fn get_bytes(&self, index: usize, bytes: usize) -> &[u8] {
+        &self[index..index + bytes]
+    }
+
+    fn get_const_bytes<const N: usize>(&self, index: usize) -> [u8; N] {
+        let mut bytes: [u8; N] = [0; N];
+        bytes.copy_from_slice(&self[index..index + N]);
+        bytes
+    }
 }
 
 pub fn extend_address_to_32(addr: &CanonicalAddr) -> Vec<u8> {
@@ -59,11 +71,21 @@ pub fn extend_address_to_32(addr: &CanonicalAddr) -> Vec<u8> {
     result
 }
 
-pub fn extend_string_to_32(s: &str) -> Vec<u8> {
+/// Turn a string into a fixed length array. If the string is shorter than the
+/// resulting array, it gets padded with \0s on the right. If longer, it gets
+/// truncated.
+pub fn string_to_array<const N: usize>(s: &str) -> [u8; N] {
     let bytes = s.as_bytes();
-    let len = usize::min(32, bytes.len());
-    let result = vec![0; 32 - len];
-    [bytes[..len].to_vec(), result].concat()
+    let len = usize::min(N, bytes.len());
+    let zeros = vec![0; N - len];
+    let padded = [bytes[..len].to_vec(), zeros].concat();
+    let mut result: [u8; N] = [0; N];
+    result.copy_from_slice(&padded);
+    result
+}
+
+pub fn extend_string_to_32(s: &str) -> Vec<u8> {
+    string_to_array::<32>(s).to_vec()
 }
 
 pub fn get_string_from_32(v: &Vec<u8>) -> StdResult<String> {

@@ -59,6 +59,7 @@ contract NFTBridge is NFTBridgeGovernance {
             name = cache.name;
             clearSplCache(tokenID);
         } else {
+            // TODO(csongor): explain the truncation here
             assembly {
             // first 32 bytes hold string length
                 symbol := mload(add(symbolString, 32))

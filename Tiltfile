@@ -412,6 +412,7 @@ k8s_resource(
 
 k8s_resource(
     "terra-fcd",
+    resource_deps = ["terra-terrad"],
     port_forwards = [port_forward(3060, name = "Terra FCD [:3060]", host = webHost)],
     trigger_mode = trigger_mode,
 )

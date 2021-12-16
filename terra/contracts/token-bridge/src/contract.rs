@@ -397,10 +397,10 @@ fn handle_attest_meta(
                 decimals: min(meta.decimals, 8u8),
                 mint: None,
                 init_hook: Some(InitHook {
-                    contract_addr: env.contract.address.to_string(),
                     msg: to_binary(&ExecuteMsg::RegisterAssetHook {
                         asset_id: asset_id.to_vec().into(),
                     })?,
+                    contract_addr: env.contract.address.to_string(),
                 }),
             })?,
             funds: vec![],
