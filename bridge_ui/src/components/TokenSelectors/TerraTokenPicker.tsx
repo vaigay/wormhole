@@ -23,6 +23,7 @@ type TerraTokenPickerProps = {
   tokenAccounts: DataWrapper<ParsedTokenAccount[]> | undefined;
   disabled: boolean;
   resetAccounts: (() => void) | undefined;
+  nft?: boolean;
 };
 
 const returnsFalse = () => false;
@@ -161,7 +162,7 @@ export default function TerraTokenPicker(props: TerraTokenPickerProps) {
       resetAccounts={resetAccountWrapper}
       error={""}
       showLoader={isLoading}
-      nft={false}
+      nft={props.nft || false}
       chainId={CHAIN_ID_TERRA}
     />
   );
