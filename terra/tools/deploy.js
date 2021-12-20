@@ -139,6 +139,9 @@ async function instantiate(contract, inst_msg) {
   return address;
 }
 
+// Instantiate contracts.  NOTE: Only append at the end, the ordering must be
+// deterministic for the addresses to work
+
 const addresses = {};
 
 addresses["wormhole.wasm"] = await instantiate("wormhole.wasm", {
