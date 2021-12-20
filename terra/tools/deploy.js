@@ -118,14 +118,14 @@ const govChain = 1;
 const govAddress =
   "0000000000000000000000000000000000000000000000000000000000000004";
 
-async function instantiate(contract, inst_msg) {
+async function instantiate(contract, admin, inst_msg) {
   var address;
   await wallet
     .createAndSignTx({
       msgs: [
         new MsgInstantiateContract(
           wallet.key.accAddress,
-          wallet.key.accAddress,
+          admin,
           codeIds[contract],
           inst_msg
         ),
@@ -144,7 +144,7 @@ async function instantiate(contract, inst_msg) {
 
 const addresses = {};
 
-addresses["wormhole.wasm"] = await instantiate("wormhole.wasm", {
+addresses["wormhole.wasm"] = await instantiate("wormhole.wasm", wallet.key.accAddress, {
   gov_chain: govChain,
   gov_address: Buffer.from(govAddress, "hex").toString("base64"),
   guardian_set_expirity: 86400,
@@ -161,7 +161,7 @@ addresses["wormhole.wasm"] = await instantiate("wormhole.wasm", {
   },
 });
 
-addresses["token_bridge.wasm"] = await instantiate("token_bridge.wasm", {
+addresses["token_bridge.wasm"] = await instantiate("token_bridge.wasm", wallet.key.accAddress, {
   owner: wallet.key.accAddress,
   gov_chain: govChain,
   gov_address: Buffer.from(govAddress, "hex").toString("base64"),
@@ -169,7 +169,7 @@ addresses["token_bridge.wasm"] = await instantiate("token_bridge.wasm", {
   wrapped_asset_code_id: codeIds["cw20_wrapped.wasm"],
 });
 
-addresses["mock.wasm"] = await instantiate("cw20_base.wasm", {
+addresses["mock.wasm"] = await instantiate("cw20_base.wasm", undefined, { // the admin arg is undefined for historical reasons (has to be kept that way to not change the deployed address)
   name: "MOCK",
   symbol: "MCK",
   decimals: 6,
@@ -182,14 +182,57 @@ addresses["mock.wasm"] = await instantiate("cw20_base.wasm", {
   mint: null,
 });
 
-addresses["nft_bridge.wasm"] = await instantiate("nft_bridge.wasm", {
+addresses["nft_bridge.wasm"] = await instantiate("nft_bridge.wasm", wallet.key.accAddress, {
   owner: wallet.key.accAddress,
   gov_chain: govChain,
   gov_address: Buffer.from(govAddress, "hex").toString("base64"),
   wormhole_contract: addresses["wormhole.wasm"],
   wrapped_asset_code_id: codeIds["cw721_wrapped.wasm"],
 });
+
+addresses["cw721_base.wasm"] = await instantiate("cw721_base.wasm", wallet.key.accAddress, {
+  name: "MOCK",
+  symbol: "MCK",
+  minter: wallet.key.accAddress,
+});
+
+// Mint two NFTS
+await wallet
+  .createAndSignTx({
+    msgs: [
+      new MsgExecuteContract(
+        wallet.key.accAddress,
+        addresses["cw721_base.wasm"],
+        {
+          mint: {
+            token_id: 0,
+            owner: wallet.key.accAddress,
+            token_uri: 'https://ixmfkhnh2o4keek2457f2v2iw47cugsx23eynlcfpstxihsay7nq.arweave.net/RdhVHafTuKIRWud-XVdItz4qGlfWyYasRXyndB5Ax9s/',
+          },
+        },
+        { uluna: 1000 }
+      ),
+      new MsgExecuteContract(
+        wallet.key.accAddress,
+        addresses["cw721_base.wasm"],
+        {
+          mint: {
+            token_id: 1,
+            owner: wallet.key.accAddress,
+            token_uri: 'https://portal.neondistrict.io/api/getNft/158456327500392944014123206890',
+          },
+        },
+        { uluna: 1000 }
+      ),
+    ],
+    memo: "",
+    fee: new StdFee(2000000, {
+      uluna: "100000",
+    }),
+  })
+
 console.log("contract address deployments", addresses);
+
 /* Registrations: tell the contracts to know about each other */
 
 const contract_registrations = {
