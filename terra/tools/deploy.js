@@ -166,15 +166,6 @@ addresses["token_bridge.wasm"] = await instantiate("token_bridge.wasm", {
   wrapped_asset_code_id: codeIds["cw20_wrapped.wasm"],
 });
 
-addresses["nft_bridge.wasm"] = await instantiate("nft_bridge.wasm", {
-  owner: wallet.key.accAddress,
-  gov_chain: govChain,
-  gov_address: Buffer.from(govAddress, "hex").toString("base64"),
-  wormhole_contract: addresses["wormhole.wasm"],
-  wrapped_asset_code_id: codeIds["cw721_wrapped.wasm"],
-});
-
-// These contracts are not essential, just instantiated for testing
 addresses["mock.wasm"] = await instantiate("cw20_base.wasm", {
   name: "MOCK",
   symbol: "MCK",
@@ -188,6 +179,14 @@ addresses["mock.wasm"] = await instantiate("cw20_base.wasm", {
   mint: null,
 });
 
+addresses["nft_bridge.wasm"] = await instantiate("nft_bridge.wasm", {
+  owner: wallet.key.accAddress,
+  gov_chain: govChain,
+  gov_address: Buffer.from(govAddress, "hex").toString("base64"),
+  wormhole_contract: addresses["wormhole.wasm"],
+  wrapped_asset_code_id: codeIds["cw721_wrapped.wasm"],
+});
+console.log("contract address deployments", addresses);
 /* Registrations: tell the contracts to know about each other */
 
 const contract_registrations = {

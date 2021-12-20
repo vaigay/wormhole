@@ -399,7 +399,7 @@ export const TERRA_NFT_BRIDGE_ADDRESS =
     ? ""
     : CLUSTER === "testnet"
     ? ""
-    : "terra1vc5zfwt08hu9cctdgkqk6j9y05w6ty0xexxr9v";
+    : "terra1kyl8f2xkd63cga8szgkejdyvxay7mc7qpdc3c5";
 
 export const getBridgeAddressForChain = (chainId: ChainId) =>
   chainId === CHAIN_ID_SOLANA
