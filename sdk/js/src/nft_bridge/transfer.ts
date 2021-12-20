@@ -1,5 +1,6 @@
 import { Token, TOKEN_PROGRAM_ID } from "@solana/spl-token";
 import { Connection, Keypair, PublicKey, Transaction } from "@solana/web3.js";
+import { MsgExecuteContract } from "@terra-money/terra.js";
 import { ethers } from "ethers";
 // import { MsgExecuteContract } from "@terra-money/terra.js";
 import {
@@ -32,85 +33,6 @@ export async function transferFromEth(
   const receipt = await v.wait();
   return receipt;
 }
-
-// export async function transferFromTerra(
-//   walletAddress: string,
-//   tokenBridgeAddress: string,
-//   tokenAddress: string,
-//   recipientChain: ChainId,
-//   recipientAddress: Uint8Array
-// ) {
-//   const nonce = Math.round(Math.random() * 100000);
-//   return isNativeAsset
-//     ? [
-//         new MsgExecuteContract(
-//           walletAddress,
-//           tokenBridgeAddress,
-//           {
-//             deposit_tokens: {},
-//           },
-//           { [tokenAddress]: amount }
-//         ),
-//         new MsgExecuteContract(
-//           walletAddress,
-//           tokenBridgeAddress,
-//           {
-//             initiate_transfer: {
-//               asset: {
-//                 amount,
-//                 info: {
-//                   native_token: {
-//                     denom: tokenAddress,
-//                   },
-//                 },
-//               },
-//               recipient_chain: recipientChain,
-//               recipient: Buffer.from(recipientAddress).toString("base64"),
-//               fee: "0",
-//               nonce: nonce,
-//             },
-//           },
-//           {}
-//         ),
-//       ]
-//     : [
-//         (new MsgExecuteContract(
-//           walletAddress,
-//           tokenAddress,
-//           {
-//             increase_allowance: {
-//               spender: tokenBridgeAddress,
-//               amount: amount,
-//               expires: {
-//                 never: {},
-//               },
-//             },
-//           },
-//           {}
-//         )),
-//         new MsgExecuteContract(
-//           walletAddress,
-//           tokenBridgeAddress,
-//           {
-//             initiate_transfer: {
-//               asset: {
-//                 amount: amount,
-//                 info: {
-//                   token: {
-//                     contract_addr: tokenAddress,
-//                   },
-//                 },
-//               },
-//               recipient_chain: recipientChain,
-//               recipient: Buffer.from(recipientAddress).toString("base64"),
-//               fee: "0",
-//               nonce: nonce,
-//             },
-//           },
-//           {}
-//         ),
-//       ];
-// }
 
 export async function transferFromSolana(
   connection: Connection,
@@ -186,4 +108,31 @@ export async function transferFromSolana(
   transaction.feePayer = new PublicKey(payerAddress);
   transaction.partialSign(messageKey);
   return transaction;
+}
+
+export async function transferFromTerra(
+  walletAddress: string,
+  tokenBridgeAddress: string,
+  tokenAddress: string,
+  tokenID: string,
+  recipientChain: ChainId,
+  recipientAddress: Uint8Array
+) {
+  const nonce = Math.round(Math.random() * 100000);
+  return [
+    new MsgExecuteContract(
+      walletAddress,
+      tokenBridgeAddress,
+      {
+        initiate_transfer: {
+          contract_address: tokenAddress,
+          token_id: tokenID,
+          recipient_chain: recipientChain,
+          recipient: Buffer.from(recipientAddress).toString("base64"),
+          nonce: nonce,
+        },
+      },
+      {}
+    ),
+  ];
 }

@@ -310,7 +310,7 @@ fn handle_complete_transfer(
             owner: get_string_from_32(&transfer_info.recipient.to_vec())?,
             token_uri: Some(
                 String::from_utf8(transfer_info.uri.to_vec())
-                    .or_else(|_| Err(StdError::generic_err("could not parse string")))?,
+                    .or_else(|_| Err(StdError::generic_err("could not parse uri string")))?,
             ),
             extension: None,
         };
