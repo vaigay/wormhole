@@ -122,6 +122,17 @@ export async function transferFromTerra(
   return [
     new MsgExecuteContract(
       walletAddress,
+      tokenAddress,
+      {
+        approve: {
+          spender: tokenBridgeAddress,
+          token_id: tokenID,
+        },
+      },
+      {}
+    ),
+    new MsgExecuteContract(
+      walletAddress,
       tokenBridgeAddress,
       {
         initiate_transfer: {
