@@ -97,6 +97,6 @@ pub fn extend_string_to_32(s: &str) -> Vec<u8> {
 
 pub fn get_string_from_32(v: &Vec<u8>) -> StdResult<String> {
     let s = String::from_utf8(v.clone())
-        .or_else(|_| Err(StdError::generic_err("could not parse string")))?;
+        .or_else(|_| Err(StdError::generic_err(format!("could not parse string {:?}", v))))?;
     Ok(s.chars().filter(|c| c != &'\0').collect())
 }
