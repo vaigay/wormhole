@@ -15,19 +15,15 @@ import { readFileSync, readdirSync } from "fs";
 const artifacts = [
   "wormhole.wasm",
   "token_bridge.wasm",
-  "pyth_bridge.wasm",
   "cw20_wrapped.wasm",
   "cw20_base.wasm",
+  "pyth_bridge.wasm",
   "nft_bridge.wasm",
   "cw721_wrapped.wasm",
   "cw721_base.wasm",
 ];
 
 /* Check that the artifacts are what we expect them to be */
-
-function red_log(txt) {
-  console.log("\x1b[31m%s\x1b[0m", txt);
-}
 
 const actual_artifacts = readdirSync("../artifacts/").filter((a) =>
   a.endsWith(".wasm")
@@ -37,14 +33,14 @@ const missing_artifacts = artifacts.filter(
   (a) => !actual_artifacts.includes(a)
 );
 if (missing_artifacts.length) {
-  red_log(
+  console.log(
     "Error during terra deployment. The following files are expected to be in the artifacts folder:"
   );
-  missing_artifacts.forEach((file) => red_log(`  - ${file}`));
-  red_log(
+  missing_artifacts.forEach((file) => console.log(`  - ${file}`));
+  console.log(
     "Hint: the deploy script needs to run after the contracts have been built."
   );
-  red_log(
+  console.log(
     "External binary blobs need to be manually added in tools/Dockerfile."
   );
   process.exit(1);
@@ -54,11 +50,11 @@ const unexpected_artifacts = actual_artifacts.filter(
   (a) => !artifacts.includes(a)
 );
 if (unexpected_artifacts.length) {
-  red_log(
+  console.log(
     "Error during terra deployment. The following files are not expected to be in the artifacts folder:"
   );
-  unexpected_artifacts.forEach((file) => red_log(`  - ${file}`));
-  red_log("Hint: you might need to modify tools/deploy.js");
+  unexpected_artifacts.forEach((file) => console.log(`  - ${file}`));
+  console.log("Hint: you might need to modify tools/deploy.js");
   process.exit(1);
 }
 
@@ -83,7 +79,7 @@ await wallet.sequence();
 const codeIds = {};
 for (const file of artifacts) {
   const contract_bytes = readFileSync(`../artifacts/${file}`);
-  red_log(`Storing WASM: ${file} (${contract_bytes.length} bytes)`);
+  console.log(`Storing WASM: ${file} (${contract_bytes.length} bytes)`);
 
   const store_code = new MsgStoreCode(
     wallet.key.accAddress,
@@ -100,11 +96,11 @@ for (const file of artifacts) {
     const ci = /"code_id","value":"([^"]+)/gm.exec(rs.raw_log)[1];
     codeIds[file] = parseInt(ci);
   } catch (e) {
-    red_log(`${e}`);
+    console.log(`${e}`);
   }
 }
 
-red_log(codeIds);
+console.log(codeIds);
 
 /* Instantiate contracts.
  *
@@ -136,6 +132,7 @@ async function instantiate(contract, admin, inst_msg) {
     .then((rs) => {
       address = /"contract_address","value":"([^"]+)/gm.exec(rs.raw_log)[1];
     });
+  console.log(`Instantiated ${contract} at ${address}`);
   return address;
 }
 
@@ -196,44 +193,37 @@ addresses["cw721_base.wasm"] = await instantiate("cw721_base.wasm", wallet.key.a
   minter: wallet.key.accAddress,
 });
 
-// Mint two NFTS
-await wallet
-  .createAndSignTx({
-    msgs: [
-      new MsgExecuteContract(
-        wallet.key.accAddress,
-        addresses["cw721_base.wasm"],
-        {
-          mint: {
-            token_id: 0,
-            owner: wallet.key.accAddress,
-            token_uri: 'https://ixmfkhnh2o4keek2457f2v2iw47cugsx23eynlcfpstxihsay7nq.arweave.net/RdhVHafTuKIRWud-XVdItz4qGlfWyYasRXyndB5Ax9s/',
+async function mint_cw721(token_id, token_uri) {
+  await wallet
+    .createAndSignTx({
+      msgs: [
+        new MsgExecuteContract(
+          wallet.key.accAddress,
+          addresses["cw721_base.wasm"],
+          {
+            mint: {
+              token_id: token_id,
+              owner: wallet.key.accAddress,
+              token_uri: token_uri,
+            },
           },
-        },
-        { uluna: 1000 }
-      ),
-      new MsgExecuteContract(
-        wallet.key.accAddress,
-        addresses["cw721_base.wasm"],
-        {
-          mint: {
-            token_id: 1,
-            owner: wallet.key.accAddress,
-            token_uri: 'https://portal.neondistrict.io/api/getNft/158456327500392944014123206890',
-          },
-        },
-        { uluna: 1000 }
-      ),
-    ],
-    memo: "",
-    fee: new StdFee(2000000, {
-      uluna: "100000",
-    }),
-  })
+          { uluna: 1000 }
+        ),
+      ],
+      memo: "",
+      fee: new StdFee(2000000, {
+        uluna: "100000",
+      }),
+    })
+    .then((tx) => terra.tx.broadcast(tx));
+  console.log(`Minted NFT: ${{token_id, token_uri}} at ${addresses[cw721_base.wasm]}`);
+}
 
-console.log("contract address deployments", addresses);
+await mint_cw721(0, 'https://ixmfkhnh2o4keek2457f2v2iw47cugsx23eynlcfpstxihsay7nq.arweave.net/RdhVHafTuKIRWud-XVdItz4qGlfWyYasRXyndB5Ax9s/');
+await mint_cw721(1, 'https://portal.neondistrict.io/api/getNft/158456327500392944014123206890');
 
-/* Registrations: tell the contracts to know about each other */
+
+/* Registrations: tell the bridge contracts to know about each other */
 
 const contract_registrations = {
   "token_bridge.wasm": [
@@ -255,7 +245,7 @@ const contract_registrations = {
 for (const [contract, registrations] of Object.entries(
   contract_registrations
 )) {
-  red_log(`Registering chains for ${contract}:`);
+  console.log(`Registering chains for ${contract}:`);
   for (const registration of registrations) {
     await wallet
       .createAndSignTx({
@@ -277,6 +267,6 @@ for (const [contract, registrations] of Object.entries(
         }),
       })
       .then((tx) => terra.tx.broadcast(tx))
-      .then((rs) => red_log(rs));
+      .then((rs) => console.log(rs));
   }
 }
