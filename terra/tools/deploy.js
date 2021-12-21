@@ -23,7 +23,7 @@ const artifacts = [
   "cw721_base.wasm",
 ];
 
-/* Check that the artifacts are what we expect them to be */
+/* Check that the artifact folder contains all the wasm files we expect and nothing else */
 
 const actual_artifacts = readdirSync("../artifacts/").filter((a) =>
   a.endsWith(".wasm")
@@ -202,7 +202,7 @@ async function mint_cw721(token_id, token_uri) {
           addresses["cw721_base.wasm"],
           {
             mint: {
-              token_id: token_id,
+              token_id: token_id.toString(),
               owner: wallet.key.accAddress,
               token_uri: token_uri,
             },
@@ -216,7 +216,7 @@ async function mint_cw721(token_id, token_uri) {
       }),
     })
     .then((tx) => terra.tx.broadcast(tx));
-  console.log(`Minted NFT: ${{token_id, token_uri}} at ${addresses[cw721_base.wasm]}`);
+  console.log(`Minted NFT with token_id ${token_id} at ${addresses["cw721_base.wasm"]}`);
 }
 
 await mint_cw721(0, 'https://ixmfkhnh2o4keek2457f2v2iw47cugsx23eynlcfpstxihsay7nq.arweave.net/RdhVHafTuKIRWud-XVdItz4qGlfWyYasRXyndB5Ax9s/');
