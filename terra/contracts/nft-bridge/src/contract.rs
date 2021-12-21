@@ -81,6 +81,8 @@ type HumanAddr = String;
 // Chain ID of Terra
 const CHAIN_ID: u16 = 3;
 
+const WRAPPED_ASSET_UPDATING: &str = "updating";
+
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn migrate(deps: DepsMut, _env: Env, _msg: MigrateMsg) -> StdResult<Response> {
     let bucket = wrapped_asset_address(deps.storage);
@@ -328,6 +330,7 @@ fn handle_complete_transfer(
             }));
         } else {
             contract_addr = env.contract.address.clone().into_string();
+            wrapped_asset(deps.storage).save(&asset_id, &HumanAddr::from(WRAPPED_ASSET_UPDATING))?;
             messages.push(CosmosMsg::Wasm(WasmMsg::Instantiate {
                 admin: Some(contract_addr.clone()),
                 code_id: cfg.wrapped_asset_code_id,
@@ -503,8 +506,12 @@ fn handle_register_asset(
     asset_id: &[u8],
 ) -> StdResult<Response> {
     let mut bucket = wrapped_asset(deps.storage);
-    let result = bucket.load(asset_id);
-    result.map_err(|_| ContractError::RegistrationForbidden.std())?;
+    let result = bucket
+        .load(asset_id)
+        .map_err(|_| ContractError::RegistrationForbidden.std())?;
+    if result != HumanAddr::from(WRAPPED_ASSET_UPDATING) {
+        return ContractError::AssetAlreadyRegistered.std_err();
+    }
 
     bucket.save(asset_id, &info.sender.to_string())?;
 
