@@ -151,7 +151,7 @@ pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> S
             contract_addr,
             token_id,
             recipient_chain,
-            recipient,
+            recipient.to_array()?,
             nonce,
         ),
         // TODO(csongor): make this nicer (pull out parsing and look up guards)

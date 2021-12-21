@@ -28,7 +28,7 @@ pub enum ExecuteMsg {
         contract_addr: String,
         token_id: String,
         recipient_chain: u16,
-        recipient: [u8; 32],
+        recipient: Binary,
         nonce: u32,
     },
 
