@@ -125,7 +125,7 @@ export async function transferFromTerra(
       tokenBridgeAddress,
       {
         initiate_transfer: {
-          contract_address: tokenAddress,
+          contract_addr: tokenAddress,
           token_id: tokenID,
           recipient_chain: recipientChain,
           recipient: Buffer.from(recipientAddress).toString("base64"),
