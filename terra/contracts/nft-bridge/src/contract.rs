@@ -51,6 +51,7 @@ use crate::{
 use wormhole::{
     byte_utils::{
         extend_address_to_32,
+        extend_address_to_32_array,
         get_string_from_32,
         string_to_array,
         ByteUtils,
@@ -411,7 +412,7 @@ fn handle_initiate_transfer(
                 msg: to_binary(&cw721_wrapped::msg::QueryMsg::WrappedAssetInfo {})?,
             }))?;
 
-        asset_address = wrapped_token_info.asset_address;
+        asset_address = wrapped_token_info.asset_address.to_array()?;
         asset_chain = wrapped_token_info.asset_chain;
     } else {
         // Native NFT, lock it up
@@ -425,7 +426,7 @@ fn handle_initiate_transfer(
         }));
 
         asset_chain = CHAIN_ID;
-        asset_address = string_to_array(&asset);
+        asset_address = extend_address_to_32_array(&asset_canonical);
     };
 
     let cw721::ContractInfoResponse { symbol, name, .. } =

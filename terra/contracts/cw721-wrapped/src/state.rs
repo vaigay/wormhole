@@ -5,6 +5,7 @@ use serde::{
 };
 
 use cosmwasm_std::{
+    Binary,
     CanonicalAddr,
     Storage,
 };
@@ -20,9 +21,9 @@ pub const KEY_WRAPPED_ASSET: &[u8] = b"wrappedAsset";
 // Created at initialization and reference original asset and bridge address
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct WrappedAssetInfo {
-    pub asset_chain: u16,        // Asset chain id
-    pub asset_address: [u8; 32], // Asset smart contract address on the original chain
-    pub bridge: CanonicalAddr,   // Bridge address, authorized to mint and burn wrapped tokens
+    pub asset_chain: u16,      // Asset chain id
+    pub asset_address: Binary, // Asset smart contract address on the original chain
+    pub bridge: CanonicalAddr, // Bridge address, authorized to mint and burn wrapped tokens
 }
 
 pub fn wrapped_asset_info(storage: &mut dyn Storage) -> Singleton<WrappedAssetInfo> {

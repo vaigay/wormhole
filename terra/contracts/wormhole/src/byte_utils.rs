@@ -65,9 +65,16 @@ impl ByteUtils for &[u8] {
     }
 }
 
+/// Left-pad a 20 byte address with 0s
 pub fn extend_address_to_32(addr: &CanonicalAddr) -> Vec<u8> {
-    let mut result: Vec<u8> = vec![0; 12];
-    result.extend(addr.as_slice());
+    extend_address_to_32_array(addr).to_vec()
+}
+
+pub fn extend_address_to_32_array(addr: &CanonicalAddr) -> [u8; 32] {
+    let mut v: Vec<u8> = vec![0; 12];
+    v.extend(addr.as_slice());
+    let mut result: [u8; 32] = [0; 32];
+    result.copy_from_slice(&v);
     result
 }
 

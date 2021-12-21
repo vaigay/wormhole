@@ -115,6 +115,6 @@ pub enum QueryMsg {
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct WrappedAssetInfoResponse {
     pub asset_chain: u16,        // Asset chain id
-    pub asset_address: [u8; 32], // Asset smart contract address in the original chain
+    pub asset_address: Binary, // Asset smart contract address in the original chain
     pub bridge: Addr,            // Bridge address, authorized to mint and burn wrapped tokens
 }
