@@ -6,6 +6,8 @@ import {
   MsgStoreCode,
 } from "@terra-money/terra.js";
 import { readFileSync, readdirSync } from "fs";
+import { Bech32, toHex } from "@cosmjs/encoding";
+import { zeroPad } from "ethers/lib/utils.js";
 
 /*
   NOTE: Only append to this array: keeping the ordering is crucial, as the
@@ -132,7 +134,7 @@ async function instantiate(contract, inst_msg) {
     .then((rs) => {
       address = /"contract_address","value":"([^"]+)/gm.exec(rs.raw_log)[1];
     });
-  console.log(`Instantiated ${contract} at ${address}`);
+  console.log(`Instantiated ${contract} at ${address} (${convert_terra_address_to_hex(address)})`);
   return address;
 }
 
@@ -269,4 +271,11 @@ for (const [contract, registrations] of Object.entries(
       .then((tx) => terra.tx.broadcast(tx))
       .then((rs) => console.log(rs));
   }
+}
+
+
+// Terra addresses are "human-readable", but for cross-chain registrations, we
+// want the "canonical" version
+function convert_terra_address_to_hex(human_addr) {
+  return "0x" + toHex(zeroPad(Bech32.decode(human_addr).data, 32));
 }
