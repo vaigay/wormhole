@@ -432,14 +432,14 @@ fn handle_initiate_transfer(
     let cw721::ContractInfoResponse { symbol, name, .. } =
         deps.querier
             .custom_query(&QueryRequest::<Empty>::Wasm(WasmQuery::Smart {
-                contract_addr: get_string_from_32(&asset_address.to_vec())?,
+                contract_addr: asset.clone(),
                 msg: to_binary(&cw721_base::msg::QueryMsg::ContractInfo {})?,
             }))?;
 
     let cw721::NftInfoResponse::<Option<Empty>> { token_uri, .. } =
         deps.querier
             .custom_query(&QueryRequest::<Empty>::Wasm(WasmQuery::Smart {
-                contract_addr: get_string_from_32(&asset_address.to_vec())?,
+                contract_addr: asset.clone(),
                 msg: to_binary(&cw721_base::msg::QueryMsg::NftInfo {
                     token_id: token_id.clone(),
                 })?,
