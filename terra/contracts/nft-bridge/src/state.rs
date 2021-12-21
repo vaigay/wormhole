@@ -208,6 +208,13 @@ impl TransferInfo {
         let recipient = data.get_const_bytes::<32>(offset);
         offset += 32;
         let recipient_chain = data.get_u16(offset);
+        offset += 2;
+
+        if data.len() != offset {
+            return Result::Err(StdError::GenericErr {
+                msg: format!("Invalid transfer length, expected {}, but got {}", offset, data.len()),
+            });
+        }
 
         Ok(TransferInfo {
             token_address,
