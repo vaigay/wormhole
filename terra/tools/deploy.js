@@ -114,14 +114,14 @@ const govChain = 1;
 const govAddress =
   "0000000000000000000000000000000000000000000000000000000000000004";
 
-async function instantiate(contract, admin, inst_msg) {
+async function instantiate(contract, inst_msg) {
   var address;
   await wallet
     .createAndSignTx({
       msgs: [
         new MsgInstantiateContract(
           wallet.key.accAddress,
-          admin,
+          wallet.key.accAddress,
           codeIds[contract],
           inst_msg
         ),
@@ -141,7 +141,7 @@ async function instantiate(contract, admin, inst_msg) {
 
 const addresses = {};
 
-addresses["wormhole.wasm"] = await instantiate("wormhole.wasm", wallet.key.accAddress, {
+addresses["wormhole.wasm"] = await instantiate("wormhole.wasm", {
   gov_chain: govChain,
   gov_address: Buffer.from(govAddress, "hex").toString("base64"),
   guardian_set_expirity: 86400,
@@ -158,7 +158,7 @@ addresses["wormhole.wasm"] = await instantiate("wormhole.wasm", wallet.key.accAd
   },
 });
 
-addresses["token_bridge.wasm"] = await instantiate("token_bridge.wasm", wallet.key.accAddress, {
+addresses["token_bridge.wasm"] = await instantiate("token_bridge.wasm", {
   owner: wallet.key.accAddress,
   gov_chain: govChain,
   gov_address: Buffer.from(govAddress, "hex").toString("base64"),
@@ -166,7 +166,7 @@ addresses["token_bridge.wasm"] = await instantiate("token_bridge.wasm", wallet.k
   wrapped_asset_code_id: codeIds["cw20_wrapped.wasm"],
 });
 
-addresses["mock.wasm"] = await instantiate("cw20_base.wasm", undefined, { // the admin arg is undefined for historical reasons (has to be kept that way to not change the deployed address)
+addresses["mock.wasm"] = await instantiate("cw20_base.wasm", {
   name: "MOCK",
   symbol: "MCK",
   decimals: 6,
@@ -179,7 +179,7 @@ addresses["mock.wasm"] = await instantiate("cw20_base.wasm", undefined, { // the
   mint: null,
 });
 
-addresses["nft_bridge.wasm"] = await instantiate("nft_bridge.wasm", wallet.key.accAddress, {
+addresses["nft_bridge.wasm"] = await instantiate("nft_bridge.wasm", {
   owner: wallet.key.accAddress,
   gov_chain: govChain,
   gov_address: Buffer.from(govAddress, "hex").toString("base64"),
@@ -187,7 +187,7 @@ addresses["nft_bridge.wasm"] = await instantiate("nft_bridge.wasm", wallet.key.a
   wrapped_asset_code_id: codeIds["cw721_wrapped.wasm"],
 });
 
-addresses["cw721_base.wasm"] = await instantiate("cw721_base.wasm", wallet.key.accAddress, {
+addresses["cw721_base.wasm"] = await instantiate("cw721_base.wasm", {
   name: "MOCK",
   symbol: "MCK",
   minter: wallet.key.accAddress,
