@@ -203,7 +203,7 @@ fn submit_vaa(
 
 fn handle_governance_payload(deps: DepsMut, env: Env, data: &Vec<u8>) -> StdResult<Response> {
     let gov_packet = GovernancePacket::deserialize(&data)?;
-    let module = get_string_from_32(&gov_packet.module)?;
+    let module = get_string_from_32(&gov_packet.module);
 
     if module != "NFTBridge" {
         return Err(StdError::generic_err("this is not a valid module"));
@@ -275,8 +275,6 @@ fn handle_complete_transfer(
 ) -> StdResult<Response> {
     let cfg = config_read(deps.storage).load()?;
 
-    //TODO(csongor): avoid double spending
-
     let expected_contract =
         bridge_contracts_read(deps.storage).load(&emitter_chain.to_be_bytes())?;
 
@@ -314,7 +312,7 @@ fn handle_complete_transfer(
             .to_string();
 
         let mint_msg = cw721_base::msg::MintMsg {
-            token_id: get_string_from_32(&transfer_info.token_id.to_vec())?,
+            token_id: get_string_from_32(&transfer_info.token_id.to_vec()), // TODO(csongor): hash
             owner,
             token_uri: Some(
                 String::from_utf8(transfer_info.uri.to_vec())
@@ -335,13 +333,14 @@ fn handle_complete_transfer(
             }));
         } else {
             contract_addr = env.contract.address.clone().into_string();
-            wrapped_asset(deps.storage).save(&asset_id, &HumanAddr::from(WRAPPED_ASSET_UPDATING))?;
+            wrapped_asset(deps.storage)
+                .save(&asset_id, &HumanAddr::from(WRAPPED_ASSET_UPDATING))?;
             messages.push(CosmosMsg::Wasm(WasmMsg::Instantiate {
                 admin: Some(contract_addr.clone()),
                 code_id: cfg.wrapped_asset_code_id,
                 msg: to_binary(&cw721_wrapped::msg::InstantiateMsg {
-                    name: get_string_from_32(&transfer_info.name.to_vec())?,
-                    symbol: get_string_from_32(&transfer_info.symbol.to_vec())?,
+                    name: get_string_from_32(&transfer_info.name.to_vec()),
+                    symbol: get_string_from_32(&transfer_info.symbol.to_vec()),
                     asset_chain: token_chain,
                     asset_address: (&transfer_info.token_address[..]).into(),
                     minter: env.contract.address.clone().into_string(),
@@ -369,7 +368,7 @@ fn handle_complete_transfer(
             contract_addr: token_address.to_string(),
             msg: to_binary(&cw721_base::msg::ExecuteMsg::<Option<Empty>>::TransferNft {
                 recipient: env.contract.address.to_string(),
-                token_id: get_string_from_32(&transfer_info.token_id.to_vec())?,
+                token_id: get_string_from_32(&transfer_info.token_id.to_vec()), // TODO(csongor): undo hash here
             })?,
             funds: vec![],
         }));
@@ -458,7 +457,7 @@ fn handle_initiate_transfer(
         token_chain: asset_chain,
         symbol: string_to_array(&symbol),
         name: string_to_array(&name),
-        token_id: string_to_array(&token_id),
+        token_id: string_to_array(&token_id), //TODO(csongor): bad, instead, hash
         uri: BoundedVec::new(token_uri.unwrap_or("".to_string()).into())?,
         recipient,
         recipient_chain,

@@ -1,8 +1,4 @@
-use cosmwasm_std::{
-    CanonicalAddr,
-    StdError,
-    StdResult,
-};
+use cosmwasm_std::CanonicalAddr;
 
 pub trait ByteUtils {
     fn get_u8(&self, index: usize) -> u8;
@@ -95,8 +91,7 @@ pub fn extend_string_to_32(s: &str) -> Vec<u8> {
     string_to_array::<32>(s).to_vec()
 }
 
-pub fn get_string_from_32(v: &Vec<u8>) -> StdResult<String> {
-    let s = String::from_utf8(v.clone())
-        .or_else(|_| Err(StdError::generic_err(format!("could not parse string {:?}", v))))?;
-    Ok(s.chars().filter(|c| c != &'\0').collect())
+pub fn get_string_from_32(v: &Vec<u8>) -> String {
+    let s = String::from_utf8_lossy(v);
+    s.chars().filter(|c| c != &'\0').collect()
 }

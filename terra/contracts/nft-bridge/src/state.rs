@@ -22,9 +22,14 @@ use cosmwasm_storage::{
     ReadonlyBucket,
     ReadonlySingleton,
     Singleton,
+    // prefixed,
+    // prefixed_read,
 };
 
 use wormhole::byte_utils::ByteUtils;
+
+//TODO(csongor): add (contractId, hash) => token_id (string)
+// DONT check that hash doesn't already exist (we keep the entry even after burning) kekkac256
 
 type HumanAddr = String;
 
