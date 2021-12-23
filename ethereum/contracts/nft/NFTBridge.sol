@@ -35,8 +35,6 @@ contract NFTBridge is NFTBridgeGovernance {
             require(ERC165(token).supportsInterface(type(IERC721Metadata).interfaceId), "must support the ERC721-Metadata extension");
         }
 
-        string memory symbolString;
-        string memory nameString;
         string memory uriString;
         bytes32 symbol;
         bytes32 name;
@@ -48,6 +46,8 @@ contract NFTBridge is NFTBridgeGovernance {
             name = cache.name;
             clearSplCache(tokenID);
         } else {
+            string memory symbolString;
+            string memory nameString;
             (,bytes memory queriedSymbol) = token.staticcall(abi.encodeWithSignature("symbol()"));
             (,bytes memory queriedName) = token.staticcall(abi.encodeWithSignature("name()"));
             symbolString = abi.decode(queriedSymbol, (string));
