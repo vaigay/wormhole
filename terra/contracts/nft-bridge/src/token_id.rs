@@ -20,8 +20,8 @@ use crate::CHAIN_ID;
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 //
 // The CW721 NFT standard allows token ids to be arbitrarily long (utf8)
-// strings, while the VAA payloads are always 32 bytes (not necessarily valid
-// utf8).
+// strings, while the token_ids in VAA payloads are always 32 bytes (and not
+// necessarily valid utf8).
 //
 // We call a token id that's in string format an "internal id", and a token id
 // that's in 32 byte format an "external id". Note that whether a token id is in
@@ -94,7 +94,7 @@ pub fn to_external_token_id(
     }
 }
 
-/// State
+// State
 
 static TOKEN_ID_HASHES_KEY: &[u8] = b"token_id_hashes";
 
