@@ -8,6 +8,7 @@ const BridgeImplementation = artifacts.require("BridgeImplementation");
 const TokenImplementation = artifacts.require("TokenImplementation");
 const FeeToken = artifacts.require("FeeToken");
 const MockBridgeImplementation = artifacts.require("MockBridgeImplementation");
+const MockTokenBridgeIntegration = artifacts.require("MockTokenBridgeIntegration");
 const MockWETH9 = artifacts.require("MockWETH9");
 
 const testSigner1PK = "cfb12303a19cde580bb4dd771639b0d26bc68353645571a8cff516ab2ee113a0";
@@ -676,6 +677,141 @@ contract("Bridge", function () {
             from: accounts[1],
             gasLimit: 2000000
         });
+    })
+
+    it("should handle additional data on token bridge payload 3", async function () {
+        try {
+            const accounts = await web3.eth.getAccounts();
+            const amount = "1000000000000000000";
+            const fee = "1000000000000000";
+
+            const initialized = new web3.eth.Contract(BridgeImplementationFullABI, TokenBridge.address);
+
+            const wrappedAddress = await initialized.methods.wrappedAsset("0x" + testBridgedAssetChain, "0x" + testBridgedAssetAddress).call();
+            const wrappedAsset = new web3.eth.Contract(TokenImplementation.abi, wrappedAddress);
+
+            const accountBalanceBefore = await wrappedAsset.methods.balanceOf(accounts[0]).call();
+            const totalSupplyBefore = await wrappedAsset.methods.totalSupply().call();
+
+            // we are using the asset where we created a wrapper in the previous test
+            const data = "0x" +
+                "03" +
+                // amount
+                web3.eth.abi.encodeParameter("uint256", new BigNumber(amount).div(1e10).toString()).substring(2) +
+                // tokenaddress
+                testBridgedAssetAddress +
+                // tokenchain
+                testBridgedAssetChain +
+                // receiver (must be self msg.sender)
+                web3.eth.abi.encodeParameter("address", accounts[0]).substr(2) +
+                // receiving chain
+                web3.eth.abi.encodeParameter("uint16", testChainId).substring(2 + (64 - 4)) +
+                // fee
+                web3.eth.abi.encodeParameter("uint256", new BigNumber(fee).div(1e10).toString()).substring(2) + 
+                // additional payload
+                web3.eth.abi.encodeParameter("address", accounts[1]).substr(2);
+
+            const vm = await signAndEncodeVM(
+                0,
+                0,
+                testForeignChainId,
+                testForeignBridgeContract,
+                1,
+                data,
+                [
+                    testSigner1PK
+                ],
+                0,
+                0
+            );
+
+            await initialized.methods.completeTransfer("0x" + vm).send({
+                value: 0,
+                from: accounts[0],
+                gasLimit: 2000000
+            });
+
+            const accountBalanceAfter = await wrappedAsset.methods.balanceOf(accounts[0]).call();
+            const totalSupplyAfter = await wrappedAsset.methods.totalSupply().call();
+
+            assert.equal(accountBalanceAfter.toString(10), new BigNumber(accountBalanceBefore).plus(amount).toString(10));
+            assert.equal(totalSupplyAfter.toString(10), new BigNumber(totalSupplyBefore).plus(amount).toString(10));
+        } catch(e) {
+            console.error(e)
+            assert.equal('error',false)
+        }
+    })
+
+    // TODO: it should not allow a redemtion from msg.sender other than "to"
+
+    it("should allow proxying payload 3", async function () {
+        try {
+            const accounts = await web3.eth.getAccounts();
+            const amount = "1000000000000000000";
+            const fee = "1000000000000000";
+
+            const initialized = new web3.eth.Contract(BridgeImplementationFullABI, TokenBridge.address);
+            
+            mock = (await MockTokenBridgeIntegration.new()).address;
+            const MockIntegration = new web3.eth.Contract(MockTokenBridgeIntegration.abi, mock);
+
+            const wrappedAddress = await initialized.methods.wrappedAsset("0x" + testBridgedAssetChain, "0x" + testBridgedAssetAddress).call();
+            const wrappedAsset = new web3.eth.Contract(TokenImplementation.abi, wrappedAddress);
+
+            const accountBalanceBefore = await wrappedAsset.methods.balanceOf(accounts[0]).call();
+            const senderBalanceBefore = await wrappedAsset.methods.balanceOf(accounts[1]).call();
+            const totalSupplyBefore = await wrappedAsset.methods.totalSupply().call();
+
+            // we are using the asset where we created a wrapper in the previous test
+            const data = "0x" +
+                "03" +
+                // amount
+                web3.eth.abi.encodeParameter("uint256", new BigNumber(amount).div(1e10).toString()).substring(2) +
+                // tokenaddress
+                testBridgedAssetAddress +
+                // tokenchain
+                testBridgedAssetChain +
+                // receiver
+                web3.eth.abi.encodeParameter("address", mock).substr(2) +
+                // receiving chain
+                web3.eth.abi.encodeParameter("uint16", testChainId).substring(2 + (64 - 4)) +
+                // fee
+                web3.eth.abi.encodeParameter("uint256", new BigNumber(fee).div(1e10).toString()).substring(2) + 
+                // additional payload
+                web3.eth.abi.encodeParameter("address", accounts[0]).substr(2);
+
+            const vm = await signAndEncodeVM(
+                0,
+                0,
+                testForeignChainId,
+                testForeignBridgeContract,
+                2,
+                data,
+                [
+                    testSigner1PK
+                ],
+                0,
+                0
+            );
+
+            await MockIntegration.methods.completeTransferAndSwap("0x" + vm).send({
+                value: 0,
+                from: accounts[1],
+                gasLimit: 2000000
+            });
+
+            const accountBalanceAfter = await wrappedAsset.methods.balanceOf(accounts[0]).call();
+            const senderBalanceAfter = await wrappedAsset.methods.balanceOf(accounts[1]).call();
+            const totalSupplyAfter = await wrappedAsset.methods.totalSupply().call();
+
+            // Note: no fees implemented on this mock
+            assert.equal(accountBalanceAfter.toString(10), new BigNumber(accountBalanceBefore).plus(amount).toString(10));
+            assert.equal(senderBalanceAfter.toString(10), new BigNumber(senderBalanceBefore));
+            assert.equal(totalSupplyAfter.toString(10), new BigNumber(totalSupplyBefore).plus(amount).toString(10));
+        } catch(e) {
+            console.error(e)
+            assert.equal('error',false)
+        }
     })
 
     it("should burn bridged assets wrappers on transfer to another chain", async function () {

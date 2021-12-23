@@ -243,22 +243,28 @@ contract Bridge is BridgeGovernance {
         setWrappedAsset(meta.tokenChain, meta.tokenAddress, token);
     }
 
-    function completeTransfer(bytes memory encodedVm) public {
-        _completeTransfer(encodedVm, false);
+    function completeTransfer(bytes memory encodedVm) public returns (IWormhole.VM memory) {
+        return _completeTransfer(encodedVm, false);
     }
 
-    function completeTransferAndUnwrapETH(bytes memory encodedVm) public {
-        _completeTransfer(encodedVm, true);
+    function completeTransferAndUnwrapETH(bytes memory encodedVm) public returns (IWormhole.VM memory) {
+        return _completeTransfer(encodedVm, true);
     }
 
     // Execute a Transfer message
-    function _completeTransfer(bytes memory encodedVm, bool unwrapWETH) internal {
+    function _completeTransfer(bytes memory encodedVm, bool unwrapWETH) internal returns (IWormhole.VM memory) {
         (IWormhole.VM memory vm, bool valid, string memory reason) = wormhole().parseAndVerifyVM(encodedVm);
 
         require(valid, reason);
         require(verifyBridgeVM(vm), "invalid emitter");
 
         BridgeStructs.Transfer memory transfer = parseTransfer(vm.payload);
+
+        // payload 3 must be redeemed by the designated proxy contract
+        address transferRecipient = address(uint160(uint256(transfer.to)));
+        if (transfer.payloadID == 3) {
+            require(msg.sender == transferRecipient, "invalid sender");
+        }
 
         require(!isTransferCompleted(vm.hash), "transfer already completed");
         setTransferCompleted(vm.hash);
@@ -308,7 +314,6 @@ contract Bridge is BridgeGovernance {
 
         // transfer bridged amount to recipient
         uint transferAmount = nativeAmount - nativeFee;
-        address transferRecipient = address(uint160(uint256(transfer.to)));
 
         if (unwrapWETH) {
             WETH().withdraw(transferAmount);
@@ -322,6 +327,8 @@ contract Bridge is BridgeGovernance {
                 SafeERC20.safeTransfer(transferToken, transferRecipient, transferAmount);
             }
         }
+
+        return vm;
     }
 
     function bridgeOut(address token, uint normalizedAmount) internal {
@@ -397,7 +404,7 @@ contract Bridge is BridgeGovernance {
         transfer.payloadID = encoded.toUint8(index);
         index += 1;
 
-        require(transfer.payloadID == 1, "invalid Transfer");
+        require(transfer.payloadID == 1 || transfer.payloadID == 3, "invalid Transfer");
 
         transfer.amount = encoded.toUint256(index);
         index += 32;
@@ -410,14 +417,15 @@ contract Bridge is BridgeGovernance {
 
         transfer.to = encoded.toBytes32(index);
         index += 32;
-
+        
         transfer.toChain = encoded.toUint16(index);
         index += 2;
 
         transfer.fee = encoded.toUint256(index);
         index += 32;
 
-        require(encoded.length == index, "invalid Transfer");
+        // payload 3 allows for an arbitrary additional payload
+        require(encoded.length == index || transfer.payloadID == 3, "invalid Transfer");
     }
 
     function bytes32ToString(bytes32 input) internal pure returns (string memory) {
