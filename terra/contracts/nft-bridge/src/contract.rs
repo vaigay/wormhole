@@ -4,6 +4,11 @@ use crate::{
         wrapped_asset,
         BoundedVec,
     },
+    token_id::{
+        from_external_token_id,
+        to_external_token_id,
+    },
+    CHAIN_ID,
 };
 use cosmwasm_std::{
     entry_point,
@@ -77,9 +82,6 @@ use sha3::{
 };
 
 type HumanAddr = String;
-
-// Chain ID of Terra
-const CHAIN_ID: u16 = 3;
 
 const WRAPPED_ASSET_UPDATING: &str = "updating";
 
@@ -289,7 +291,7 @@ fn handle_complete_transfer(
         ));
     }
 
-    let token_chain = transfer_info.token_chain;
+    let token_chain = transfer_info.nft_chain;
     let target_address = &(&transfer_info.recipient[..]).get_address(0);
 
     let mut messages = vec![];
@@ -301,9 +303,16 @@ fn handle_complete_transfer(
 
     let contract_addr;
 
+    let token_id = from_external_token_id(
+        deps.storage,
+        token_chain,
+        &transfer_info.nft_address,
+        &transfer_info.token_id,
+    )?;
+
     if token_chain != CHAIN_ID {
         // NFT is not native to this chain, so we need a wrapper
-        let asset_address = transfer_info.token_address;
+        let asset_address = transfer_info.nft_address;
         let asset_id = build_asset_id(token_chain, &asset_address);
 
         let owner = deps
@@ -311,13 +320,13 @@ fn handle_complete_transfer(
             .addr_humanize(&(&transfer_info.recipient[..]).get_address(0))?
             .to_string();
 
+        let token_uri = String::from_utf8(transfer_info.uri.to_vec())
+            .or_else(|_| Err(StdError::generic_err("could not parse uri string")))?;
+
         let mint_msg = cw721_base::msg::MintMsg {
-            token_id: get_string_from_32(&transfer_info.token_id.to_vec()), // TODO(csongor): hash
+            token_id,
             owner,
-            token_uri: Some(
-                String::from_utf8(transfer_info.uri.to_vec())
-                    .or_else(|_| Err(StdError::generic_err("could not parse uri string")))?,
-            ),
+            token_uri: Some(token_uri),
             extension: None,
         };
 
@@ -342,7 +351,7 @@ fn handle_complete_transfer(
                     name: get_string_from_32(&transfer_info.name.to_vec()),
                     symbol: get_string_from_32(&transfer_info.symbol.to_vec()),
                     asset_chain: token_chain,
-                    asset_address: (&transfer_info.token_address[..]).into(),
+                    asset_address: (&transfer_info.nft_address[..]).into(),
                     minter: env.contract.address.clone().into_string(),
                     mint: Some(mint_msg),
                     init_hook: Some(cw721_wrapped::msg::InitHook {
@@ -360,7 +369,7 @@ fn handle_complete_transfer(
     } else {
         // Native NFT, transfer from custody
         let mut messages = vec![];
-        let token_address = (&transfer_info.token_address[..]).get_address(0);
+        let token_address = (&transfer_info.nft_address[..]).get_address(0);
 
         contract_addr = deps.api.addr_humanize(&token_address)?.to_string();
 
@@ -368,7 +377,7 @@ fn handle_complete_transfer(
             contract_addr: token_address.to_string(),
             msg: to_binary(&cw721_base::msg::ExecuteMsg::<Option<Empty>>::TransferNft {
                 recipient: env.contract.address.to_string(),
-                token_id: get_string_from_32(&transfer_info.token_id.to_vec()), // TODO(csongor): undo hash here
+                token_id,
             })?,
             funds: vec![],
         }));
@@ -453,11 +462,11 @@ fn handle_initiate_transfer(
             }))?;
 
     let transfer_info = TransferInfo {
-        token_address: asset_address,
-        token_chain: asset_chain,
+        nft_address: asset_address,
+        nft_chain: asset_chain,
         symbol: string_to_array(&symbol),
         name: string_to_array(&name),
-        token_id: string_to_array(&token_id), //TODO(csongor): bad, instead, hash
+        token_id: to_external_token_id(deps.storage, asset_chain, &asset_address, token_id)?,
         uri: BoundedVec::new(token_uri.unwrap_or("".to_string()).into())?,
         recipient,
         recipient_chain,

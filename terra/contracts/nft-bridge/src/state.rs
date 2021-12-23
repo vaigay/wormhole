@@ -11,7 +11,6 @@ use cosmwasm_std::{
     StdError,
     StdResult,
     Storage,
-    Uint128,
 };
 use cosmwasm_storage::{
     bucket,
@@ -22,25 +21,16 @@ use cosmwasm_storage::{
     ReadonlyBucket,
     ReadonlySingleton,
     Singleton,
-    // prefixed,
-    // prefixed_read,
 };
 
 use wormhole::byte_utils::ByteUtils;
 
-//TODO(csongor): add (contractId, hash) => token_id (string)
-// DONT check that hash doesn't already exist (we keep the entry even after burning) kekkac256
-
 type HumanAddr = String;
 
 pub static CONFIG_KEY: &[u8] = b"config";
-pub static TRANSFER_TMP_KEY: &[u8] = b"transfer_tmp";
 pub static WRAPPED_ASSET_KEY: &[u8] = b"wrapped_asset";
-pub static WRAPPED_ASSET_SEQ_KEY: &[u8] = b"wrapped_seq_asset";
 pub static WRAPPED_ASSET_ADDRESS_KEY: &[u8] = b"wrapped_asset_address";
-pub static BRIDGE_CONTRACTS: &[u8] = b"bridge_contracts";
-pub static BRIDGE_DEPOSITS: &[u8] = b"bridge_deposits";
-pub static NATIVE_COUNTER: &[u8] = b"native_counter";
+pub static BRIDGE_CONTRACTS_KEY: &[u8] = b"bridge_contracts";
 
 // Guardian set information
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
@@ -61,20 +51,12 @@ pub fn config_read(storage: &dyn Storage) -> ReadonlySingleton<ConfigInfo> {
     singleton_read(storage, CONFIG_KEY)
 }
 
-pub fn bridge_deposit(storage: &mut dyn Storage) -> Bucket<Uint128> {
-    bucket(storage, BRIDGE_DEPOSITS)
-}
-
-pub fn bridge_deposit_read(storage: &dyn Storage) -> ReadonlyBucket<Uint128> {
-    bucket_read(storage, BRIDGE_DEPOSITS)
-}
-
 pub fn bridge_contracts(storage: &mut dyn Storage) -> Bucket<Vec<u8>> {
-    bucket(storage, BRIDGE_CONTRACTS)
+    bucket(storage, BRIDGE_CONTRACTS_KEY)
 }
 
 pub fn bridge_contracts_read(storage: &dyn Storage) -> ReadonlyBucket<Vec<u8>> {
-    bucket_read(storage, BRIDGE_CONTRACTS)
+    bucket_read(storage, BRIDGE_CONTRACTS_KEY)
 }
 
 pub fn wrapped_asset(storage: &mut dyn Storage) -> Bucket<HumanAddr> {
@@ -83,14 +65,6 @@ pub fn wrapped_asset(storage: &mut dyn Storage) -> Bucket<HumanAddr> {
 
 pub fn wrapped_asset_read(storage: &dyn Storage) -> ReadonlyBucket<HumanAddr> {
     bucket_read(storage, WRAPPED_ASSET_KEY)
-}
-
-pub fn wrapped_asset_seq(storage: &mut dyn Storage) -> Bucket<u64> {
-    bucket(storage, WRAPPED_ASSET_SEQ_KEY)
-}
-
-pub fn wrapped_asset_seq_read(storage: &mut dyn Storage) -> ReadonlyBucket<u64> {
-    bucket_read(storage, WRAPPED_ASSET_SEQ_KEY)
 }
 
 pub fn wrapped_asset_address(storage: &mut dyn Storage) -> Bucket<Vec<u8>> {
@@ -112,12 +86,8 @@ pub struct TransferState {
     pub multiplier: Serialized128,
     pub nonce: u32,
     pub previous_balance: Serialized128,
-    pub token_address: HumanAddr,
+    pub nft_address: HumanAddr,
     pub token_canonical: CanonicalAddr,
-}
-
-pub fn wrapped_transfer_tmp(storage: &mut dyn Storage) -> Singleton<TransferState> {
-    singleton(storage, TRANSFER_TMP_KEY)
 }
 
 pub struct Action;
@@ -182,8 +152,8 @@ impl<T, const N: usize> BoundedVec<T, N> {
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct TransferInfo {
-    pub token_address: [u8; 32],
-    pub token_chain: u16,
+    pub nft_address: [u8; 32],
+    pub nft_chain: u16,
     pub symbol: [u8; 32],
     pub name: [u8; 32],
     pub token_id: [u8; 32],
@@ -196,9 +166,9 @@ impl TransferInfo {
     pub fn deserialize(data: &Vec<u8>) -> StdResult<Self> {
         let data = data.as_slice();
         let mut offset: usize = 0; // offset into data in bytes
-        let token_address = data.get_const_bytes::<32>(offset);
+        let nft_address = data.get_const_bytes::<32>(offset);
         offset += 32;
-        let token_chain = data.get_u16(offset);
+        let nft_chain = data.get_u16(offset);
         offset += 2;
         let symbol = data.get_const_bytes::<32>(offset);
         offset += 32;
@@ -217,13 +187,17 @@ impl TransferInfo {
 
         if data.len() != offset {
             return Result::Err(StdError::GenericErr {
-                msg: format!("Invalid transfer length, expected {}, but got {}", offset, data.len()),
+                msg: format!(
+                    "Invalid transfer length, expected {}, but got {}",
+                    offset,
+                    data.len()
+                ),
             });
         }
 
         Ok(TransferInfo {
-            token_address,
-            token_chain,
+            nft_address,
+            nft_chain,
             symbol,
             name,
             token_id,
@@ -234,8 +208,8 @@ impl TransferInfo {
     }
     pub fn serialize(&self) -> Vec<u8> {
         [
-            self.token_address.to_vec(),
-            self.token_chain.to_be_bytes().to_vec(),
+            self.nft_address.to_vec(),
+            self.nft_chain.to_be_bytes().to_vec(),
             self.symbol.to_vec(),
             self.name.to_vec(),
             self.token_id.to_vec(),
