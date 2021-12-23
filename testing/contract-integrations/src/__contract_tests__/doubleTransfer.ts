@@ -7,7 +7,7 @@ import {
   parseSequenceFromLogEth,
 } from "@certusone/wormhole-sdk";
 import { describe, jest, test } from "@jest/globals";
-import { ethers } from "ethers";
+import { ethers, Signer } from "ethers";
 import { getAddress } from "ethers/lib/utils";
 import {
   CHAIN_ID_ETH,
@@ -163,11 +163,15 @@ describe("Double transfer Tests", () => {
               {
                 transport: NodeHttpTransport(), //This should only be needed when running in node.
               },
-              500,
-              2
-            ).catch(() => {
-              console.log("Caught exception from vaa retry");
-            })
+              1000,
+              30
+            )
+              .then(() => {
+                console.log(`found vaa for ${seq}`);
+              })
+              .catch(() => {
+                console.log("Caught exception from vaa retry");
+              })
           );
         });
 
